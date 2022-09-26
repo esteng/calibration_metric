@@ -1,0 +1,31 @@
+# pyproject.toml
+
+[build-system]
+requires      = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "calibration-metric"
+version = "1.0.0"
+description = "Metrics for measuring model calibration in semantic parsing."
+readme = "README.md"
+authors = [{ name = "Elias Stengel-Eskin", email = "elias.stengel@gmail.com" }]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["parsing", "ML", "seq2seq"]
+dependencies = [
+]
+requires-python = ">=3.6"
+
+[project.optional-dependencies]
+dev = ["black", "bumpver", "isort", "pip-tools", "pytest"]
+
+[project.urls]
+Homepage = ""
+
+[project.scripts]
+realpython = "reader.__main__:main"
