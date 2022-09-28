@@ -63,8 +63,23 @@ def test_mse_metric_below_high_mae():
         is_correct.append(np.random.choice([0, 1], p=[1-p_correct, p_correct]))
     is_correct = np.array(is_correct)
 
-    metric = MeanErrorAbove(n_bins=20)
+    metric = MeanErrorBelow(n_bins=20)
     me_below = metric(top_preds, is_correct)
-    pdb.set_trace()
     # should be sufficiently small 
     assert me_below > 0.2
+
+def test_mse_metric_below_raise_warning():
+    # make top preds evenly spaced probs between 0 and 1
+    top_preds = np.linspace(0, 1, 10000)
+    is_correct = []
+    # produce corrects based on probability at that index
+    for i in range(top_preds.shape[0]): 
+        # make predictions consistently overconfident by dividing probability by 2
+        p_correct = top_preds[i] / 2
+        is_correct.append(np.random.choice([0, 1], p=[1-p_correct, p_correct]))
+    is_correct = np.array(is_correct)
+
+    metric = MeanErrorBelow(n_bins=20)
+    me_below = metric(top_preds, is_correct)
+    # should be sufficiently small 
+    assert me_below < 0.2

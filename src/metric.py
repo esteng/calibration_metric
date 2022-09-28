@@ -7,6 +7,8 @@ import scipy
 from scipy import stats
 import pandas as pd 
 
+from utils.warnings import check_size_warning
+
 class Metric:
     def __init__(self, 
                 name: str,
@@ -70,6 +72,8 @@ class MAEMetric(Metric):
         df = self.bins_to_df(values, bin_edges, bin_number)
         p_model = df["prob_model"].values
         p_correct = df["prob_correct"].values
+        check_size_warning(p_correct, p_model, self.name)
+
         mae = np.mean(np.abs(p_model - p_correct))
         return mae
 
@@ -87,6 +91,8 @@ class MeanErrorAbove(Metric):
         p_correct = df["prob_correct"].values
         over_p_model  = p_model[p_model > p_correct]
         over_p_correct = p_correct[p_model > p_correct]
+        check_size_warning(over_p_correct, over_p_model, self.name)
+
         if over_p_correct.shape[0] == 0:
             return -1.0
         me = np.mean(over_p_model - over_p_correct)
@@ -106,7 +112,8 @@ class MeanErrorBelow(Metric):
         p_correct = df["prob_correct"].values
         under_p_model  = p_model[p_model < p_correct]
         under_p_correct = p_correct[p_model < p_correct]
-        pdb.set_trace()
+        check_size_warning(under_p_correct, under_p_model, self.name)
+
         if under_p_correct.shape[0] == 0:
             return -1.0 
         me = np.mean(under_p_correct - under_p_model)
