@@ -1,5 +1,5 @@
 from typing import Tuple
-import pdb 
+from functools import cache 
 
 from collections import Counter
 import numpy as np 
@@ -18,6 +18,7 @@ class Metric:
     def __call__(self, top_preds: np.array) -> float:
         raise NotImplementedError
 
+    @cache
     def bin_preds(self, 
                  top_probs: np.array, 
                  is_correct: np.array) -> Tuple[np.array, np.array, np.array]: 
@@ -39,6 +40,7 @@ class Metric:
 
         return (values, bins, bin_number)
 
+    @cache
     def bins_to_df(self, 
         values: np.array,
         bin_edges: np.array,
@@ -47,67 +49,59 @@ class Metric:
         # create LUT for bin number to number of items in that bin 
         bin_lookup = Counter(bin_number)
         # instantiate df 
-        # df = pd.DataFrame(columns=["prob_model", "prob_correct", "count"])
+        df = pd.DataFrame(columns=["prob_model", "prob_correct", "count"])
         # populate df
-        df_data = []
         for i, (val, edge, bin_num) in enumerate(zip(values, bin_edges, bin_number)):
-            df_data.append({"prob_model": edge, 
+            df = df.append({"prob_model": edge, 
                             "prob_correct": val, 
-                            "count": bin_lookup[i+1]})
-        df = pd.DataFrame.from_dict(df_data)
+                            "count": bin_lookup[i+1]}, 
+                            ignore_index=True)
         return df
 
-class MAEMetric(Metric):
-    def __init__(self,
-                n_bins: int = 20):
-        super().__init__("MAE", n_bins)
+class MSEMetric(Metric):
+    def __init__(self):
+        super().__init__("MSE")
 
     def __call__(self, 
                 top_preds: np.array,
                 is_correct: np.array) -> float:
-
         values, bin_edges, bin_number = self.bin_preds(top_preds, is_correct) 
         df = self.bins_to_df(values, bin_edges, bin_number)
-        p_model = df["prob_model"].values
-        p_correct = df["prob_correct"].values
-        mae = np.mean(np.abs(p_model - p_correct))
-        return mae
+        pred_ys = df["prob_model"].values
+        true_ys = df["prob_correct"].values
+        mse = np.mean((pred_ys - true_ys)**2)
+        return mse
 
 class MeanErrorAbove(Metric):
-    def __init__(self,
-                n_bins: int = 20):
-        super().__init__("Mean Error (overconfident)", n_bins)
+    def __init__(self):
+        super().__init__("Mean Error (overconfident)")
 
     def __call__(self, 
                 top_preds: np.array,
                 is_correct: np.array) -> float:
         values, bin_edges, bin_number = self.bin_preds(top_preds, is_correct) 
         df = self.bins_to_df(values, bin_edges, bin_number)
-        p_model = df["prob_model"].values
-        p_correct = df["prob_correct"].values
-        over_p_model  = p_model[p_model > p_correct]
-        over_p_correct = p_correct[p_model > p_correct]
-        if over_p_correct.shape[0] == 0:
-            return -1.0
-        me = np.mean(over_p_model - over_p_correct)
+        pred_ys = df["prob_model"].values
+        true_ys = df["prob_correct"].values
+        overconfident_pred_ys = pred_ys[pred_ys > true_ys]
+        overconfident_true_ys = true_ys[pred_ys > true_ys]
+
+        me = np.mean(overconfident_pred_ys - overconfident_true_ys)
         return me
 
 class MeanErrorBelow(Metric):
-    def __init__(self, 
-                n_bins: int = 20):
-        super().__init__("Mean Error (underconfident)", n_bins)
+    def __init__(self):
+        super().__init__("Mean Error (underconfident)")
 
     def __call__(self, 
                 top_preds: np.array,
                 is_correct: np.array) -> float:
         values, bin_edges, bin_number = self.bin_preds(top_preds, is_correct) 
         df = self.bins_to_df(values, bin_edges, bin_number)
-        p_model = df["prob_model"].values
-        p_correct = df["prob_correct"].values
-        under_p_model  = p_model[p_model < p_correct]
-        under_p_correct = p_correct[p_model < p_correct]
-        pdb.set_trace()
-        if under_p_correct.shape[0] == 0:
-            return -1.0 
-        me = np.mean(under_p_correct - under_p_model)
+        pred_ys = df["prob_model"].values
+        true_ys = df["prob_correct"].values
+        underconfident_pred_ys = pred_ys[true_ys > pred_ys]
+        underconfident_true_ys = true_ys[true_ys > pred_ys]
+
+        me = np.mean(underconfident_true_ys - underconfident_pred_ys)
         return me

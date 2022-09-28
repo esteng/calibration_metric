@@ -1,0 +1,10 @@
+numpy
+scipy
+pandas
+
+[dev]
+black
+bumpver
+isort
+pip-tools
+pytest

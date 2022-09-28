@@ -6,14 +6,14 @@ from metric import MSEMetric, MeanErrorAbove, MeanErrorBelow
 METRIC_LUT = {"mse": MSEMetric, "me_above": MeanErrorAbove, "me_below": MeanErrorBelow}
 def create_reader(args):
     if args.reader == "top_logit_format_sequence":
-        return TopLogitFormatSequenceReader(args.logit_file)
+        return TopLogitFormatSequenceReader(args.file)
     else:
         raise ValueError(f"Reader {args.reader} not supported")
 
 def main(args):
     reader = create_reader(args) 
     top_preds, is_correct = reader.read()
-    metric_names = args.metrics.split(",")
+    metric_names = args.metric_names.split(",")
     metrics = {metric_name: METRIC_LUT[metric_name]() for metric_name in metric_names}
     report = Report(metrics)
     to_print = report.create_report(top_preds, is_correct)
