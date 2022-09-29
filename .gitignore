@@ -4,5 +4,7 @@
 
 build
 build/*
+dist
+dist/*
 .pytest_cache
 .pytest_cache/*
