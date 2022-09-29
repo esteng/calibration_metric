@@ -1,9 +1,12 @@
-from time import time
 from typing import Tuple
 import json 
 import numpy as np 
-import pdb 
+
 class Reader:
+    """
+    Abstract reader class, can be extended 
+    to read different file formats
+    """
     def __init__(self, file):
         self.file = file
 
@@ -11,8 +14,26 @@ class Reader:
         raise NotImplementedError
 
 class TopLogitFormatSequenceReader(Reader):
+    """
+    Dataset reader for the HF output format.
+    File format is jsonl, where each line is a 
+    dict corresponding to a single input line,
+    with the following keys:
+    - top_logits: list of the top k logits for each timestep
+    - top_logit_idxs: list of the top k logits for each timestep
+    - labels: list of the label indices for each timestep
+    """
 
     def read(self) -> Tuple[np.array]:
+        """
+        Read the file and extract the single top predicted index
+        and the corresponding confidence score (logit).
+        Compares each predicted index to the label index to determine
+        whether the prediction was correct.
+        Returns:
+            top_preds: np.array of shape (num_examples, )
+            is_correct: np.array of shape (num_examples, )
+        """
         all_top_preds = []
         all_is_correct = []
         with open(self.file, 'r') as f:
