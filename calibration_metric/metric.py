@@ -16,14 +16,26 @@ class Metric:
     def __init__(self, 
                 name: str,
                 n_bins: int = 20,
+                weighted: bool = False,
+                weight_key: str = "normalized_count",
         ):
+        if weighted:
+            name = f"Weighted {name}"
         self.name = name
         self.n_bins = n_bins
+        self.weighted = weighted
+        self.weight_key = weight_key
 
     def __call__(self, 
                 top_preds: np.array,
                 is_correct: np.array) -> float:
         raise NotImplementedError
+
+    def weight_by_count(self, p_correct: np.array, p_model: np.array, normalized_counts: np.array) -> np.array:
+        abs_error = np.abs(p_correct - p_model) 
+        weighted_mean_error = np.sum(abs_error * normalized_counts)
+        return weighted_mean_error
+
 
     def bin_preds(self, 
                  top_probs: np.array, 
@@ -93,15 +105,24 @@ class Metric:
                             "prob_correct": val, 
                             "count": bin_lookup[i+1]})
         df = pd.DataFrame.from_dict(df_data)
+        df['normalized_count'] = df['count'] / df['count'].sum()
+        df['log_count'] = np.log(df['count']) 
+        # NOTE: this is not the same as the log of the normalized count; it is intended to
+        # discount high count bins.
+        df['normalized_log_count'] = df['log_count'] / df['log_count'].sum()
         return df
+
+
 
 class MAEMetric(Metric):
     """
     Computes mean absolute error against y=x line.
     """
     def __init__(self,
-                n_bins: int = 20):
-        super().__init__("MAE", n_bins)
+                n_bins: int = 20,
+                weighted: bool = False,
+                weight_key: str = "normalized_count"):
+        super().__init__("MAE", n_bins, weighted, weight_key)
 
     def __call__(self, 
                 top_preds: np.array,
@@ -124,6 +145,9 @@ class MAEMetric(Metric):
         p_model = df["prob_model"].values
         p_correct = df["prob_correct"].values
         check_size_warning(p_correct, p_model, self.name)
+        if self.weighted:
+            norm_counts = df[self.weight_key].values
+            return self.weight_by_count(p_correct, p_model, norm_counts)
 
         mae = np.mean(np.abs(p_model - p_correct))
         return mae
@@ -131,8 +155,11 @@ class MAEMetric(Metric):
 class MeanErrorAbove(Metric):
     """Computes the Mean Error on over-confident predictions."""
     def __init__(self,
-                n_bins: int = 20):
-        super().__init__("Mean Error (overconfident)", n_bins)
+                n_bins: int = 20,
+                weighted: bool = False,
+                weight_key: str = "normalized_count"):
+        name = "Mean Error (overconfident)"
+        super().__init__(name, n_bins, weighted, weight_key)
 
     def __call__(self, 
                 top_preds: np.array,
@@ -160,14 +187,21 @@ class MeanErrorAbove(Metric):
 
         if over_p_correct.shape[0] == 0:
             return -1.0
+
+        if self.weighted:
+            norm_counts = df[self.weight_key][p_model > p_correct].values
+            return self.weight_by_count(over_p_correct, over_p_model, norm_counts)
         me = np.mean(over_p_model - over_p_correct)
         return me
 
 class MeanErrorBelow(Metric):
     """Computes the Mean Error on under-confident predictions."""
     def __init__(self, 
-                n_bins: int = 20):
-        super().__init__("Mean Error (underconfident)", n_bins)
+                n_bins: int = 20,
+                weighted: bool = False,
+                weight_key: str = "normalized_count"):
+        name = "Mean Error (underconfident)"
+        super().__init__(name, n_bins, weighted, weight_key)
 
     def __call__(self, 
                 top_preds: np.array,
@@ -195,5 +229,8 @@ class MeanErrorBelow(Metric):
 
         if under_p_correct.shape[0] == 0:
             return -1.0 
+        if self.weighted:
+            norm_counts = df[p_model < p_correct][self.weight_key].values
+            return self.weight_by_count(under_p_correct, under_p_model, norm_counts)
         me = np.mean(under_p_correct - under_p_model)
         return me
