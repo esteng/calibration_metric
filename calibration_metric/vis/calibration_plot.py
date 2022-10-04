@@ -39,7 +39,10 @@ def plot_df(df: pd.DataFrame,
             use_log_count: bool = True, 
             figsize: Tuple[int, int] = (5, 5),
             ax: Any  = None,
-            title: str = None) -> plt.Figure:
+            title: str = None,
+            show_legend: bool = True,
+            xlabel: str = "Avg. Correct",
+            ylabel: str = "Model Prob.") -> plt.Figure:
     """
     Plot the binned probabilies and correct labels against the x=y line 
     
@@ -73,6 +76,12 @@ def plot_df(df: pd.DataFrame,
     sns.despine()
     if title is not None:
         ax.set_title(title)
+
+    if not show_legend:
+        ax.get_legend().remove()
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
 
     # if ax is not None:
         # return fig
