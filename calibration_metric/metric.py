@@ -6,8 +6,11 @@ import numpy as np
 import scipy 
 from scipy import stats
 import pandas as pd 
+import logging
 
 from calibration_metric.utils.warnings import check_size_warning
+
+logger = logging.getLogger(__name__)
 
 class Metric:
     """
@@ -78,7 +81,15 @@ class Metric:
 
         if any(np.isnan(values)):
             check_size_warning(top_probs, is_correct, self.name)
-            raise ValueError(f"NaN values in values from insufficient samples. Try decreasing n_bins or increasing the number of samples.")
+            logger.warn(f"NaN values in values from insufficient samples. Try decreasing n_bins or increasing the number of samples.")
+            pre_values = np.array([x for x in values])
+            pre_bins = np.array([x for x in bins])
+            value_idxs = [i for i in range(len(values)) if not np.isnan(values[i])]
+            nan_idxs = [i for i in range(len(values)) if np.isnan(values[i])]
+            values = values[value_idxs]
+            bins = bins[value_idxs]
+            logger.warn(f"Reducing number of bins to {len(values)} by dropping NaN values at {nan_idxs} for bins {pre_bins[nan_idxs]}.")
+
 
         return (values, bins, bin_number)
 
@@ -234,3 +245,42 @@ class MeanErrorBelow(Metric):
             return self.weight_by_count(under_p_correct, under_p_model, norm_counts)
         me = np.mean(under_p_correct - under_p_model)
         return me
+
+class PearsonMetric(Metric):
+    """
+    Computes pearson correlation between prob under model and average correctness of bin. 
+    """
+    def __init__(self,
+                n_bins: int = 20,
+                weighted: bool = False,
+                weight_key: str = "normalized_count"):
+        super().__init__("Pearson", n_bins, weighted, weight_key)
+
+    def __call__(self, 
+                top_preds: np.array,
+                is_correct: np.array) -> float:
+        """
+        Parameters
+        ----------
+        top_preds : np.array
+            Array of predicted probabilities for each timestep across all examples.
+        is_correct : np.array
+            Array of whether each timestep is correct for each timestep across all examples.
+        
+        Returns
+        -------
+        mae : float
+            Mean absolute error against y=x line.
+        """
+        values, bin_edges, bin_number = self.bin_preds(top_preds, is_correct) 
+        df = self.bins_to_df(values, bin_edges, bin_number)
+        p_model = df["prob_model"].values
+        p_correct = df["prob_correct"].values
+        check_size_warning(p_correct, p_model, self.name)
+        # if self.weighted:
+            # norm_counts = df[self.weight_key].values
+            # return self.weight_by_count(p_correct, p_model, norm_counts)
+
+        # mae = np.mean(np.abs(p_model - p_correct))
+        stat, p = stats.pearsonr(p_model, p_correct)
+        return stat

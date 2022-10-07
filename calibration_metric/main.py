@@ -1,12 +1,12 @@
 import argparse
 from calibration_metric.utils.reader import TopLogitFormatSequenceReader, MisoTopLogitFormatSequenceReader
 from calibration_metric.utils.report import Report
-from calibration_metric.metric import MAEMetric, MeanErrorAbove, MeanErrorBelow
+from calibration_metric.metric import MAEMetric, MeanErrorAbove, MeanErrorBelow, PearsonMetric
 import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-METRIC_LUT = {"mae": MAEMetric, "me_above": MeanErrorAbove, "me_below": MeanErrorBelow}
+METRIC_LUT = {"mae": MAEMetric, "me_above": MeanErrorAbove, "me_below": MeanErrorBelow, "pearson": PearsonMetric}
 
 def create_reader(args):
     """
