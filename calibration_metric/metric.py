@@ -125,15 +125,17 @@ class Metric:
 
 
 
-class MAEMetric(Metric):
+class ECEMetric(Metric):
     """
-    Computes mean absolute error against y=x line.
+    Computes expected calibration error (https://people.cs.pitt.edu/~milos/research/AAAI_Calibration.pdf)
     """
     def __init__(self,
                 n_bins: int = 20,
-                weighted: bool = False,
+                weighted: bool = True,
+                return_df: bool = False,
                 weight_key: str = "normalized_count"):
-        super().__init__("MAE", n_bins, weighted, weight_key)
+        super().__init__("ECE", n_bins, weighted, weight_key)
+        self.return_df = return_df
 
     def __call__(self, 
                 top_preds: np.array,
@@ -148,8 +150,8 @@ class MAEMetric(Metric):
         
         Returns
         -------
-        mae : float
-            Mean absolute error against y=x line.
+        ece : float
+            The expected calibration error 
         """
         values, bin_edges, bin_number = self.bin_preds(top_preds, is_correct) 
         df = self.bins_to_df(values, bin_edges, bin_number)
@@ -158,10 +160,49 @@ class MAEMetric(Metric):
         check_size_warning(p_correct, p_model, self.name)
         if self.weighted:
             norm_counts = df[self.weight_key].values
-            return self.weight_by_count(p_correct, p_model, norm_counts)
+            ece = self.weight_by_count(p_correct, p_model, norm_counts)
+        else:
+            ece = np.mean(np.abs(p_model - p_correct))
 
-        mae = np.mean(np.abs(p_model - p_correct))
-        return mae
+        if self.return_df:
+            return ece, df
+        return ece 
+
+class MCEMetric(Metric):
+    """
+    Computes maximum calibration error (https://people.cs.pitt.edu/~milos/research/AAAI_Calibration.pdf)
+    """
+    def __init__(self,
+                n_bins: int = 20,
+                weighted: bool = False,
+                weight_key: str = "normalized_count"):
+        super().__init__("MCE", n_bins, weighted, weight_key)
+
+    def __call__(self, 
+                top_preds: np.array,
+                is_correct: np.array) -> float:
+        """
+        Parameters
+        ----------
+        top_preds : np.array
+            Array of predicted probabilities for each timestep across all examples.
+        is_correct : np.array
+            Array of whether each timestep is correct for each timestep across all examples.
+        
+        Returns
+        -------
+        mce : float
+            The max calibration error 
+        """
+        values, bin_edges, bin_number = self.bin_preds(top_preds, is_correct) 
+        df = self.bins_to_df(values, bin_edges, bin_number)
+        p_model = df["prob_model"].values
+        p_correct = df["prob_correct"].values
+        check_size_warning(p_correct, p_model, self.name)
+
+        mce = np.max(np.abs(p_model - p_correct))
+        return mce 
+
 
 class MeanErrorAbove(Metric):
     """Computes the Mean Error on over-confident predictions."""

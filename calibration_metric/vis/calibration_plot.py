@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np 
 import pandas as pd 
 
-from calibration_metric.metric import MAEMetric
+from calibration_metric.metric import ECEMetric
 from calibration_metric.utils.reader import Reader, TopLogitFormatSequenceReader
 
 def get_df_from_file(file_path: str, 
@@ -24,16 +24,12 @@ def get_df_from_file(file_path: str,
     -------
     df : pd.DataFrame
     """
-    metric = MAEMetric(n_bins)
+    metric = ECEMetric(n_bins, return_df = True)
     reader = reader_cls(file_path, ignore_tokens=ignore_tokens)
     top_preds, is_correct = reader.read()
-    print(f"Number of examples: {len(is_correct)}")
-    print(f"correct_sum: {np.sum(is_correct)}")
-    values, bins, bin_number = metric.bin_preds(top_preds, is_correct)
-    print(values)
-    print(bins)
-    df = metric.bins_to_df(values, bins, bin_number)
-    return df
+    ece, df = metric(top_preds, is_correct) 
+    ece *= 100
+    return df, ece
 
 def plot_df(df: pd.DataFrame, 
             use_log_count: bool = True, 
@@ -41,6 +37,8 @@ def plot_df(df: pd.DataFrame,
             ax: Any  = None,
             title: str = None,
             show_legend: bool = True,
+            metric_value: float = None,
+            metric_value_kwargs: dict = None,
             xlabel: str = "Avg. Correct",
             ylabel: str = "Model Prob.") -> plt.Figure:
     """
@@ -73,6 +71,17 @@ def plot_df(df: pd.DataFrame,
     xs_line = np.linspace(0,1,2)
     ys_line = xs_line
     sns.lineplot(x = xs_line, y=ys_line, ax=ax, color='black')
+    if metric_value is not None:
+        if metric_value_kwargs is not None:
+            mx = metric_value_kwargs['x']
+            my = metric_value_kwargs['y']
+            others = {k:v for k,v in metric_value_kwargs.items() if k not in ['x', 'y']}
+        else:
+            mx = 0.5
+            my = 0.5
+            others = {}
+        ax.text(mx, my, f"ECE: {metric_value:.2f}", **others)
+
     sns.despine()
     if title is not None:
         ax.set_title(title)

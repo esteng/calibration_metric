@@ -1,12 +1,21 @@
 import argparse
-from calibration_metric.utils.reader import TopLogitFormatSequenceReader, MisoTopLogitFormatSequenceReader
+from calibration_metric.utils.reader import (TopLogitFormatSequenceReader, 
+                                            MisoTopLogitFormatSequenceReader)
 from calibration_metric.utils.report import Report
-from calibration_metric.metric import MAEMetric, MeanErrorAbove, MeanErrorBelow, PearsonMetric
+from calibration_metric.metric import (ECEMetric, 
+                                        MeanErrorAbove, 
+                                        MeanErrorBelow, 
+                                        PearsonMetric,
+                                        MCEMetric)
 import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-METRIC_LUT = {"mae": MAEMetric, "me_above": MeanErrorAbove, "me_below": MeanErrorBelow, "pearson": PearsonMetric}
+METRIC_LUT = {"ece": ECEMetric, 
+             "me_above": MeanErrorAbove, 
+             "me_below": MeanErrorBelow, 
+             "pearson": PearsonMetric, 
+             "max": MCEMetric}
 
 def create_reader(args):
     """
@@ -50,7 +59,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--logit_file", type=str, required=True)
     parser.add_argument("--reader", type=str, required=False, default="top_logit_format_sequence", choices = ["top_logit_format_sequence", "miso_logit_format_sequence"])
-    parser.add_argument("--metrics", type=str, required=False, default="mae,me_above,me_below")
+    parser.add_argument("--metrics", type=str, required=False, default="ece,me_above,me_below")
     parser.add_argument("--n_bins", type=int, default=20)
     parser.add_argument("--weighted", action="store_true")
     parser.add_argument("--weight_key", type=str, default="normalized_count", choices=["normalized_count", "normalized_log_count"])

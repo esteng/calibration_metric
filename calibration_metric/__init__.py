@@ -1,1 +1,1 @@
-from calibration_metric.metric import MAEMetric, MeanErrorAbove, MeanErrorBelow
+from calibration_metric.metric import ECEMetric, MeanErrorAbove, MeanErrorBelow
