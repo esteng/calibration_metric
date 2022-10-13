@@ -111,8 +111,10 @@ class Metric:
         # df = pd.DataFrame(columns=["prob_model", "prob_correct", "count"])
         # populate df
         df_data = []
-        for i, (val, edge, bin_num) in enumerate(zip(values, bin_edges, bin_number)):
-            df_data.append({"prob_model": edge, 
+        for i, (val, edge_start, bin_num) in enumerate(zip(values, bin_edges, bin_number)):
+            edge_end = bin_edges[i+1]
+            midpoint = (edge_start + edge_end) / 2
+            df_data.append({"prob_model": midpoint, 
                             "prob_correct": val, 
                             "count": bin_lookup[i+1]})
         df = pd.DataFrame.from_dict(df_data)

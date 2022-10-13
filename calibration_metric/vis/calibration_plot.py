@@ -39,7 +39,7 @@ def plot_df(df: pd.DataFrame,
             show_legend: bool = True,
             metric_value: float = None,
             metric_value_kwargs: dict = None,
-            xlabel: str = "Avg. Correct",
+            xlabel: str = "Accuracy",
             ylabel: str = "Model Prob.") -> plt.Figure:
     """
     Plot the binned probabilies and correct labels against the x=y line 
