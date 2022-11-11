@@ -1,5 +1,4 @@
 from typing import Tuple
-import pdb 
 
 from collections import Counter
 import numpy as np 
@@ -35,6 +34,23 @@ class Metric:
         raise NotImplementedError
 
     def weight_by_count(self, p_correct: np.array, p_model: np.array, normalized_counts: np.array) -> np.array:
+        """
+        Weight the metric by the number of examples in each bin.
+
+        Parameters
+        ----------
+        p_correct : np.array
+            Array of the average number of correct examples in each bin.
+        p_model : np.array
+            Array of the average confidence in each bin.
+        normalized_counts : np.array
+            Array of the number of examples in each bin, normalized by the total number of examples.
+    
+        Returns
+        -------
+        weighted_metric : np.array
+            Weighted absolute error between p_correct and p_model.
+        """
         abs_error = np.abs(p_correct - p_model) 
         weighted_mean_error = np.sum(abs_error * normalized_counts)
         return weighted_mean_error

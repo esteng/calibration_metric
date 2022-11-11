@@ -52,6 +52,20 @@ def plot_df(df: pd.DataFrame,
         Whether to use log of count for the size of the points, by default True
     figsize : Tuple[int, int], optional
         Size of the figure, by default (5, 5)
+    ax : Any, optional
+        Matplotlib axis, by default None
+    title : str, optional
+        Title of the plot, by default None
+    show_legend : bool, optional
+        Whether to show the legend, by default True
+    metric_value : float, optional
+        Value of the ECE metric, by default None
+    metric_value_kwargs : dict, optional
+        Keyword arguments for the metric value, by default None
+    xlabel : str, optional
+        Label for the x-axis, by default "Accuracy"
+    ylabel : str, optional
+        Label for the y-axis, by default "Model Prob."
 
     Returns
     -------
@@ -92,5 +106,5 @@ def plot_df(df: pd.DataFrame,
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
-    # if ax is not None:
-        # return fig
+    if ax is not None:
+        return fig
