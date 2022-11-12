@@ -67,10 +67,10 @@ plot_df(df, ax = ax)
 This package also contains utils for reading in predicted tokens and token probabilities. 
 The main reader is the `calibration_metric.utils.reader.TopLogitFormatSequenceReader`, which reads in sequences of logits and tokens.
 The file format has each datapoint on a separate line. Each datapoint is a token-level dictionary. If $N$ is the number of tokens in the gold output sequence, $V$ is the vocabulary size, and $k$ is a small number of logits to store, then each dict has:
- - `top_logits`: $N x k$: the top k logits as predicted by the model for each of the $N$ tokens 
- - `top_logit_idxs`: $N x k$: the vocab indices of the top k logits for each of the $N$ tokens
- - `logit_at_label`: $N x 1$: the logit at the gold label index
- - `labels`: $N x 1$: the vocab indices of the gold labels 
+ - `top_logits`: $N \times k$: the top k logits as predicted by the model for each of the $N$ tokens 
+ - `top_logit_idxs`: $N \times k$: the vocab indices of the top k logits for each of the $N$ tokens
+ - `logit_at_label`: $N \times 1$: the logit at the gold label index
+ - `labels`: $N \times 1$: the vocab indices of the gold labels 
  - `input_str`: The input string corresponding to the gold sequence (useful for analysis and debugging)
 
  If this seems complicated, don't worry: there is also a utility for generating these files.
