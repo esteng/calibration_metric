@@ -6,5 +6,8 @@ build
 build/*
 dist
 dist/*
+
+*.egg-info
+
 .pytest_cache
 .pytest_cache/*
