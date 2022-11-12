@@ -7,7 +7,7 @@ VALIDATION_FILE=examples/data/dev_medium.jsonl
 python calibration_metric/examples/hf_generate.py \
     --model_name_or_path ${CHECKPOINT_DIR} \
     --validation_file ${VALIDATION_FILE} \
-    --output_dir ${CHECKPOINT_DIR}/outputs_test_metric \
+    --output_dir ${CHECKPOINT_DIR}/outputs_logits \
     --per_device_eval_batch_size 8 \
     --predict_with_generate \
     --get_logits 
