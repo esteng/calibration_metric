@@ -82,6 +82,6 @@ The file format has each datapoint on a separate line. Each datapoint is a token
  For an example of how to obtain metrics from a huggingface model, please see `examples/hf_generate.py`. 
  To make things easier, a script called `examples/get_logits.sh` is included that takes in a path to a model. 
  The models used here are models from [BenchClamp](https://github.com/microsoft/semantic_parsing_with_constrained_lm). 
- To make things easier, a pre-trained T5-small semantic parsing model for SMCalFlow can be downloaded [here](TODO:LINK). 
+ To make things easier, a pre-trained T5-small semantic parsing model for SMCalFlow can be downloaded [here](https://nlp.jhu.edu/semantic_parsing_calibration/t5_benchclamp_checkpoint_10000.tar.gz).
  Once you've downloaded the model, you can generate a logits file using `./examples/get_logits.sh <PATH_TO_MODEL>`. 
  This will save a logits file to the following directory: `<PATH_TO_MODEL>/output_logits`. 
