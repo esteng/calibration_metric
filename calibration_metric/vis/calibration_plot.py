@@ -11,7 +11,8 @@ from calibration_metric.utils.reader import Reader, TopLogitFormatSequenceReader
 def get_df_from_file(file_path: str, 
                      n_bins: int=20,
                      reader_cls: Reader = TopLogitFormatSequenceReader,
-                     ignore_tokens: List[Any] = None) -> pd.DataFrame:
+                     ignore_tokens: List[Any] = None,
+                     binning_strategy: str = "uniform") -> pd.DataFrame:
     """
     Get the dataframe from the file path. 
 
@@ -24,7 +25,7 @@ def get_df_from_file(file_path: str,
     -------
     df : pd.DataFrame
     """
-    metric = ECEMetric(n_bins, return_df = True)
+    metric = ECEMetric(n_bins, return_df = True, binning_strategy=binning_strategy)
     reader = reader_cls(file_path, ignore_tokens=ignore_tokens)
     top_preds, is_correct = reader.read()
     ece, df = metric(top_preds, is_correct) 

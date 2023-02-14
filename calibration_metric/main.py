@@ -34,6 +34,10 @@ def main(args):
             return int(x)
         except ValueError:
             return x 
+        
+    def format_metric_name(metric_name, strategy):
+        return f"{strategy} {metric_name}"
+    
 
     if args.ignore_tokens is not None:
         ignore_tokens = args.ignore_tokens.split(",")
@@ -46,7 +50,8 @@ def main(args):
     logger.info(f"Finished reading {len(top_preds)} predictions")
     metric_names = args.metrics.split(",")
     logger.info(f"Creating {len(metric_names)} metrics...")
-    metrics = {metric_name: METRIC_LUT[metric_name](args.n_bins, 
+    metrics = {format_metric_name(metric_name, args.binning_strategy): METRIC_LUT[metric_name](
+                                                    args.n_bins, 
                                                     weighted=args.weighted,
                                                     weight_key=args.weight_key,
                                                     binning_strategy=args.binning_strategy)

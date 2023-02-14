@@ -70,6 +70,7 @@ class Metric:
             statistic='mean', 
             bins=self.n_bins
         )
+        bin_number = bin_number - 1
         return values, bins, bin_number
 
     def adaptive_bin(self,
@@ -78,7 +79,7 @@ class Metric:
         """Implements adaptive binning strategy as in https://github.com/yding5/AdaptiveBinning
         (adapted from https://github.com/yding5/AdaptiveBinning/blob/master/AdaptiveBinning.py)"""
         # zip and sort 
-        zipped = sorted(list(zip(top_probs, is_correct)), key=lambda x: x[0])
+        zipped = sorted(list(zip(top_probs, is_correct)), key=lambda x: x[0], reverse=True)
         n_total = len(zipped)
 
         z = 1.645
@@ -86,7 +87,7 @@ class Metric:
         final_num = [0 for i in range(n_total)]
         correct = [0 for i in range(n_total)]
         confidence = [0 for i in range(n_total)]
-        conf_min = [0 for i in range(n_total)]
+        conf_min = [1 for i in range(n_total)]
         conf_max = [0 for i in range(n_total)]
         accuracy = [0 for i in range(n_total)]
 
@@ -95,26 +96,29 @@ class Metric:
 
         # traverse all samples for initial binning
         for i, (prob, is_correct) in enumerate(zipped):
+            assert(prob <= 1.0 and prob >= 0.0)
             # merge the last bin if too small
-            if num[ind] > target_num_samples:
-                if (n_total - i) > 40 and conf_min[ind] - zipped[-1][0] > 0.05:
-                    ind += 1
-                    target_num_samples = float("inf")
+            if num[ind] > target_num_samples and \
+                (n_total - i) > 40 \
+                and conf_min[ind] - zipped[-1][0] > 0.05:
+                ind += 1
+                target_num_samples = float("inf")
 
-                num[ind] += 1
-                confidence[ind] += prob
+            num[ind] += 1
+            confidence[ind] += prob
+            
+            if is_correct:
+                correct[ind] += 1
+            
+            conf_min[ind] = min(conf_min[ind], prob)
+            conf_max[ind] = max(conf_max[ind], prob)
 
-                if is_correct:
-                    correct[ind] += 1
-                
-                conf_min[ind]  = min(conf_min[ind], prob)
-                conf_max[ind] = max(conf_max[ind], prob)
-
-                # get target number of samples in the bin
-                if conf_max[ind] == conf_min[ind]:
-                    target_num_samples = float("inf")
-                else:
-                    target_num_samples = (z / (conf_max[ind]-conf_min[ind])) ** 2 * 0.25
+            # get target number of samples in the bin
+            if conf_max[ind] == conf_min[ind]:
+                target_num_samples = float("inf")
+            else:
+                target_num_samples = (z / (conf_max[ind]-conf_min[ind])) ** 2 * 0.25
+        # pdb.set_trace()
         n_bins = ind + 1
         # get final binning
         if target_num_samples - num[ind] > 0:
@@ -133,14 +137,16 @@ class Metric:
         num = [0 for i in range(n_bins)]
         correct = [0 for i in range(n_bins)]
         confidence = [0 for i in range(n_bins)]
-        conf_min = [0 for i in range(n_bins)]
+        conf_min = [1 for i in range(n_bins)]
         conf_max = [0 for i in range(n_bins)]
         accuracy = [0 for i in range(n_bins)]
         gap = [0 for i in range(n_bins)]
         neg_gap = [0 for i in range(n_bins)]
 
         ind = 0
+        bin_number = []
         for i, (prob, is_correct) in enumerate(zipped):
+            bin_number.append(ind)
             num[ind] += 1
             confidence[ind] += prob
 
@@ -152,15 +158,17 @@ class Metric:
             if num[ind] == final_num[ind]:
                 confidence[ind] = confidence[ind] / num[ind] if num[ind] > 0 else 0
                 accuracy[ind] = correct[ind] / num[ind] if num[ind] > 0 else 0
-                left = conf_min[ind]
-                right = conf_max[ind]
+
                 if confidence[ind] - accuracy[ind] > 0:
                     gap[ind] = confidence[ind] - accuracy[ind]
                 else:
                     neg_gap[ind] = confidence[ind] - accuracy[ind]
                 ind += 1
 
-        pdb.set_trace()
+        values = np.array(accuracy)
+        bin_edges = np.array(confidence)
+        bin_number = np.array(bin_number)
+        return values, bin_edges, bin_number
 
     def bin_preds(self, 
                  top_probs: np.array, 
@@ -240,11 +248,15 @@ class Metric:
         # populate df
         df_data = []
         for i, (val, edge_start, bin_num) in enumerate(zip(values, bin_edges, bin_number)):
-            edge_end = bin_edges[i+1]
-            midpoint = (edge_start + edge_end) / 2
+            if self.binning_strategy == "uniform":
+                edge_end = bin_edges[i+1]
+                midpoint = (edge_start + edge_end) / 2
+            else:
+                midpoint = edge_start
+
             df_data.append({"prob_model": midpoint, 
                             "prob_correct": val, 
-                            "count": bin_lookup[i+1]})
+                            "count": bin_lookup[i]})
         df = pd.DataFrame.from_dict(df_data)
         df['normalized_count'] = df['count'] / df['count'].sum()
         df['log_count'] = np.log(df['count']) 
