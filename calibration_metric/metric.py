@@ -6,6 +6,7 @@ import scipy
 from scipy import stats
 import pandas as pd 
 import logging
+import pdb 
 
 from calibration_metric.utils.warnings import check_size_warning
 
@@ -20,6 +21,7 @@ class Metric:
                 n_bins: int = 20,
                 weighted: bool = False,
                 weight_key: str = "normalized_count",
+                binning_strategy: str = "uniform",
         ):
         if weighted:
             name = f"Weighted {name}"
@@ -27,6 +29,7 @@ class Metric:
         self.n_bins = n_bins
         self.weighted = weighted
         self.weight_key = weight_key
+        self.binning_strategy = binning_strategy
 
     def __call__(self, 
                 top_preds: np.array,
@@ -55,6 +58,109 @@ class Metric:
         weighted_mean_error = np.sum(abs_error * normalized_counts)
         return weighted_mean_error
 
+    def uniform_bin(self,
+                    top_probs: np.array,
+                    is_correct: np.array):
+        """Implements naive uniform binning strategy"""
+        (values, 
+        bins, 
+        bin_number) = stats.binned_statistic(
+            top_probs, 
+            is_correct, 
+            statistic='mean', 
+            bins=self.n_bins
+        )
+        return values, bins, bin_number
+
+    def adaptive_bin(self,
+                    top_probs: np.array,
+                    is_correct: np.array):
+        """Implements adaptive binning strategy as in https://github.com/yding5/AdaptiveBinning
+        (adapted from https://github.com/yding5/AdaptiveBinning/blob/master/AdaptiveBinning.py)"""
+        # zip and sort 
+        zipped = sorted(list(zip(top_probs, is_correct)), key=lambda x: x[0])
+        n_total = len(zipped)
+
+        z = 1.645
+        num = [0 for i in range(n_total)]
+        final_num = [0 for i in range(n_total)]
+        correct = [0 for i in range(n_total)]
+        confidence = [0 for i in range(n_total)]
+        conf_min = [0 for i in range(n_total)]
+        conf_max = [0 for i in range(n_total)]
+        accuracy = [0 for i in range(n_total)]
+
+        ind = 0
+        target_num_samples = float("inf")
+
+        # traverse all samples for initial binning
+        for i, (prob, is_correct) in enumerate(zipped):
+            # merge the last bin if too small
+            if num[ind] > target_num_samples:
+                if (n_total - i) > 40 and conf_min[ind] - zipped[-1][0] > 0.05:
+                    ind += 1
+                    target_num_samples = float("inf")
+
+                num[ind] += 1
+                confidence[ind] += prob
+
+                if is_correct:
+                    correct[ind] += 1
+                
+                conf_min[ind]  = min(conf_min[ind], prob)
+                conf_max[ind] = max(conf_max[ind], prob)
+
+                # get target number of samples in the bin
+                if conf_max[ind] == conf_min[ind]:
+                    target_num_samples = float("inf")
+                else:
+                    target_num_samples = (z / (conf_max[ind]-conf_min[ind])) ** 2 * 0.25
+        n_bins = ind + 1
+        # get final binning
+        if target_num_samples - num[ind] > 0:
+            needed = target_num_samples - num[ind]
+            extract = [0 for i in range(n_bins - 1)]
+            final_num[n_bins - 1] = num[n_bins - 1]
+            for i in range(n_bins - 1):
+                extract[i] = int(needed * num[ind] / n_total)
+                final_num[i] = num[i] - extract[i]
+                final_num[n_bins - 1] += extract[i]
+        else:
+            final_num = num
+        final_num = final_num[:n_bins]
+
+        # re-intialize
+        num = [0 for i in range(n_bins)]
+        correct = [0 for i in range(n_bins)]
+        confidence = [0 for i in range(n_bins)]
+        conf_min = [0 for i in range(n_bins)]
+        conf_max = [0 for i in range(n_bins)]
+        accuracy = [0 for i in range(n_bins)]
+        gap = [0 for i in range(n_bins)]
+        neg_gap = [0 for i in range(n_bins)]
+
+        ind = 0
+        for i, (prob, is_correct) in enumerate(zipped):
+            num[ind] += 1
+            confidence[ind] += prob
+
+            if is_correct: 
+                correct[ind] += 1
+            conf_min[ind] = min(conf_min[ind], prob)
+            conf_max[ind] = max(conf_max[ind], prob)
+
+            if num[ind] == final_num[ind]:
+                confidence[ind] = confidence[ind] / num[ind] if num[ind] > 0 else 0
+                accuracy[ind] = correct[ind] / num[ind] if num[ind] > 0 else 0
+                left = conf_min[ind]
+                right = conf_max[ind]
+                if confidence[ind] - accuracy[ind] > 0:
+                    gap[ind] = confidence[ind] - accuracy[ind]
+                else:
+                    neg_gap[ind] = confidence[ind] - accuracy[ind]
+                ind += 1
+
+        pdb.set_trace()
 
     def bin_preds(self, 
                  top_probs: np.array, 
@@ -86,14 +192,20 @@ class Metric:
             raise AssertionError(f"top_probs and is_correct must have the same length, got {top_probs.shape} and {is_correct.shape} respectively.")
 
         # bin predicted probs in n_bins bins 
-        (values, 
-        bins, 
-        bin_number) = stats.binned_statistic(
-            top_probs, 
-            is_correct, 
-            statistic='mean', 
-            bins=self.n_bins
-        )
+        # (values, 
+        # bins, 
+        # bin_number) = stats.binned_statistic(
+        #     top_probs, 
+        #     is_correct, 
+        #     statistic='mean', 
+        #     bins=self.n_bins
+        # )
+        if self.binning_strategy == "uniform":
+            values, bins, bin_number = self.uniform_bin(top_probs, is_correct)
+        elif self.binning_strategy == "adaptive": 
+            values, bins, bin_number = self.adaptive_bin(top_probs, is_correct)
+        else:
+            raise ValueError(f"Invalid binning strategy: {self.binning_strategy}")
 
         if any(np.isnan(values)):
             check_size_warning(top_probs, is_correct, self.name)
@@ -151,8 +263,9 @@ class ECEMetric(Metric):
                 n_bins: int = 20,
                 weighted: bool = True,
                 return_df: bool = False,
-                weight_key: str = "normalized_count"):
-        super().__init__("ECE", n_bins, weighted, weight_key)
+                weight_key: str = "normalized_count",
+                binning_strategy: str = "uniform"):
+        super().__init__("ECE", n_bins, weighted, weight_key, binning_strategy)
         self.return_df = return_df
 
     def __call__(self, 
@@ -193,8 +306,9 @@ class MCEMetric(Metric):
     def __init__(self,
                 n_bins: int = 20,
                 weighted: bool = False,
-                weight_key: str = "normalized_count"):
-        super().__init__("MCE", n_bins, weighted, weight_key)
+                weight_key: str = "normalized_count",
+                binning_strategy: str = "uniform"):
+        super().__init__("MCE", n_bins, weighted, weight_key, binning_strategy)
 
     def __call__(self, 
                 top_preds: np.array,
@@ -227,9 +341,10 @@ class MeanErrorAbove(Metric):
     def __init__(self,
                 n_bins: int = 20,
                 weighted: bool = False,
-                weight_key: str = "normalized_count"):
+                weight_key: str = "normalized_count",
+                binning_strategy: str = "uniform"):
         name = "Mean Error (overconfident)"
-        super().__init__(name, n_bins, weighted, weight_key)
+        super().__init__(name, n_bins, weighted, weight_key, binning_strategy)
 
     def __call__(self, 
                 top_preds: np.array,
@@ -269,9 +384,10 @@ class MeanErrorBelow(Metric):
     def __init__(self, 
                 n_bins: int = 20,
                 weighted: bool = False,
-                weight_key: str = "normalized_count"):
+                weight_key: str = "normalized_count",
+                binning_strategy: str = "uniform"):
         name = "Mean Error (underconfident)"
-        super().__init__(name, n_bins, weighted, weight_key)
+        super().__init__(name, n_bins, weighted, weight_key, binning_strategy)
 
     def __call__(self, 
                 top_preds: np.array,
@@ -312,8 +428,9 @@ class PearsonMetric(Metric):
     def __init__(self,
                 n_bins: int = 20,
                 weighted: bool = False,
-                weight_key: str = "normalized_count"):
-        super().__init__("Pearson", n_bins, weighted, weight_key)
+                weight_key: str = "normalized_count",
+                binning_strategy: str = "uniform"):
+        super().__init__("Pearson", n_bins, weighted, weight_key, binning_strategy)
 
     def __call__(self, 
                 top_preds: np.array,

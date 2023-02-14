@@ -76,9 +76,12 @@ def plot_df(df: pd.DataFrame,
         df["log_count"] = np.log(df["count"])
         count_key = "log_count"
 
-    if ax is None: 
+    if ax is None:  
+        print("ax is None") 
         fig, ax = plt.subplots(figsize=figsize)
-
+        return_fig = True 
+    else:
+        return_fig = False
     # plot bins 
     sns.scatterplot(data=df, x = "prob_correct", y="prob_model", size=count_key, ax=ax, legend='brief')
     # plot y=x line
@@ -106,5 +109,5 @@ def plot_df(df: pd.DataFrame,
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
 
-    if ax is not None:
+    if return_fig: 
         return fig

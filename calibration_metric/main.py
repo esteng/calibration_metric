@@ -48,7 +48,8 @@ def main(args):
     logger.info(f"Creating {len(metric_names)} metrics...")
     metrics = {metric_name: METRIC_LUT[metric_name](args.n_bins, 
                                                     weighted=args.weighted,
-                                                    weight_key=args.weight_key)
+                                                    weight_key=args.weight_key,
+                                                    binning_strategy=args.binning_strategy)
                 for metric_name in metric_names}
     logger.info("Metrics:")
     report = Report(metrics)
@@ -61,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument("--reader", type=str, required=False, default="top_logit_format_sequence", choices = ["top_logit_format_sequence", "miso_logit_format_sequence"])
     parser.add_argument("--metrics", type=str, required=False, default="ece,me_above,me_below")
     parser.add_argument("--n_bins", type=int, default=20)
+    parser.add_argument("--binning_strategy", type=str, default="uniform", choices=["uniform", "adaptive"], help="strategy for forming bins")
     parser.add_argument("--weighted", action="store_true")
     parser.add_argument("--weight_key", type=str, default="normalized_count", choices=["normalized_count", "normalized_log_count"])
     parser.add_argument("--ignore_tokens", type=str, default=None)
