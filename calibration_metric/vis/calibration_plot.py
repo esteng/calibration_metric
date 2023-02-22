@@ -1,5 +1,5 @@
 import pandas as pd 
-from typing import Tuple, Any, List
+from typing import Tuple, Any, List, Dict
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np 
@@ -12,7 +12,8 @@ def get_df_from_file(file_path: str,
                      n_bins: int=20,
                      reader_cls: Reader = TopLogitFormatSequenceReader,
                      ignore_tokens: List[Any] = None,
-                     binning_strategy: str = "uniform") -> pd.DataFrame:
+                     binning_strategy: str = "uniform",
+                     reader_kwargs: Dict = {}) -> pd.DataFrame:
     """
     Get the dataframe from the file path. 
 
@@ -26,7 +27,7 @@ def get_df_from_file(file_path: str,
     df : pd.DataFrame
     """
     metric = ECEMetric(n_bins, return_df = True, binning_strategy=binning_strategy)
-    reader = reader_cls(file_path, ignore_tokens=ignore_tokens)
+    reader = reader_cls(file_path, ignore_tokens=ignore_tokens, **reader_kwargs)
     top_preds, is_correct = reader.read()
     ece, df = metric(top_preds, is_correct) 
     ece *= 100

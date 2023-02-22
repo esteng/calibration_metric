@@ -85,6 +85,62 @@ class TopLogitFormatSequenceReader(Reader):
 
         return (np.array(all_top_preds), np.array(all_is_correct))
 
+class TopKTopLogitFormatSequenceReader(TopLogitFormatSequenceReader):
+    def __init__(self, file: str, ignore_tokens: List[Any] = None, k: int = 2):
+        super().__init__(file, ignore_tokens)
+        self.k = k
+
+    def check_tokens(self, 
+                    pred_toks: List[Any],
+                    true_tok: Any): 
+        """
+        Check whether the true token is contained in top k predicted tokens
+        """
+        return true_tok in pred_toks
+
+    def read(self) -> Tuple[np.array]:
+        """
+        Read the file and extract the top k predicted indices
+        and the corresponding confidence score (logit).
+        Compares each predicted index to the label index to determine
+        whether the prediction was correct.
+        Returns:
+            top_preds: np.array of shape (num_examples, )
+            is_correct: np.array of shape (num_examples, )
+        """
+        all_top_preds = []
+        all_is_correct = []
+        with open(self.file, 'r') as f:
+            for line in f:
+                line = json.loads(line)
+                top_k_logits = np.array(line['top_logits'])
+                top_k_logit_idxs = np.array(line['top_logit_idxs'])
+                # get the top k logit and idx
+                top_k_logit_local_idxs = np.argsort(top_k_logits, axis=-1)[:, -self.k:]
+                # top_one_logit_local_idx = np.argmax(top_k_logits, axis=-1)
+                # seq_len = top_one_logit_local_idx.shape
+                seq_len = top_k_logit_local_idxs.shape[0]
+
+
+                # get the actual single top logit, not assuming they're sorted already 
+                top_k_logit_local_idxs = top_k_logit_local_idxs.reshape((seq_len, -1))
+                top_k_logits = np.take_along_axis(top_k_logits, top_k_logit_local_idxs, axis=1)
+                top_k_logit_idxs = np.take_along_axis(top_k_logit_idxs, top_k_logit_local_idxs, axis=1)
+                labels = np.array(line['labels'])
+
+                for timestep in range(top_k_logits.shape[0]):
+                    is_correct = self.check_tokens(top_k_logit_idxs[timestep], labels[timestep]) 
+                    # ignore tokens if specified
+                    # meant to be tokens like @ROOT@, BOS, EOS, etc.
+                    if self.ignore_tokens is not None and labels[timestep] in self.ignore_tokens:
+                        continue
+
+                    # still use the single max logit as the confidence score 
+                    all_top_preds.append(np.max(top_k_logits[timestep]))
+                    all_is_correct.append(is_correct)
+
+        return (np.array(all_top_preds), np.array(all_is_correct))
+
 class MisoTopLogitFormatSequenceReader(TopLogitFormatSequenceReader):
 
     def check_tokens(self, 
