@@ -1,7 +1,16 @@
 # calibration_metric: a package for measuring calibration in seq2seq tasks
 
 This package provides functions and classes for measuring calibration. It's designed primarily for measuring and plotting calibration at the token-level for sequence-to-sequence tasks, especially semantic parsing. 
-For more information, please see [the paper describing this library](TODO:LINK).
+For more information, please see [the paper describing this library](https://arxiv.org/abs/2211.07443). If you use this library or find it helpful, please cite: 
+
+```
+@article{stengel2022calibrated,
+  title={Calibrated Interpretation: Confidence Estimation in Semantic Parsing},
+  author={Stengel-Eskin, Elias and Van Durme, Benjamin},
+  journal={arXiv preprint arXiv:2211.07443},
+  year={2022}
+}
+``` 
 
 ## Quickstart 
 To install this package locally: 
