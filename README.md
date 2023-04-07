@@ -13,7 +13,7 @@ For more information, please see [the paper describing this library](https://arx
 ``` 
 
 ## Quickstart 
-To install this package locally: 
+To install this package locally (assuming a `python=3.8` environment): 
 
 ```
 git clone git@github.com:esteng/calibration_metric.git 
@@ -32,7 +32,7 @@ pip install -e .[examples]
 To test that your installation worked, try:
 
 ```
-python calibration_metric/main.py --logit_file examples/logits/dev_medium.logits
+python -m calibration_metric.main --logit_file examples/logits/dev_medium.logits
 ```
 
 
