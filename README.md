@@ -32,7 +32,7 @@ pip install -e .[examples]
 To test that your installation worked, try:
 
 ```
-python calibration_metric/main.py --logit_file examples/logits/dev_medium.logits
+python -m calibration_metric.main --logit_file examples/logits/dev_medium.logits
 ```
 
 
