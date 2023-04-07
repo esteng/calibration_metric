@@ -1,6 +1,6 @@
 import numpy as np
 from typing import List, Dict
-from metric import Metric
+from calibration_metric.metric import Metric
 
 class Report:
     """Wrapper class to run and print metrics"""
