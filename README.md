@@ -13,7 +13,7 @@ For more information, please see [the paper describing this library](https://arx
 ``` 
 
 ## Quickstart 
-To install this package locally: 
+To install this package locally (assuming a `python=3.8` environment): 
 
 ```
 git clone git@github.com:esteng/calibration_metric.git 
