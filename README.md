@@ -59,7 +59,7 @@ The main tools for doing this are in `calibration_metric.vis.calibration_plot`.
 `get_df_from_file()` allows you to get a pandas Dataframe from a file in order to plot. Alternatively, given a list of accuracies `accs` and confidences `probs`, a dataframe can be obtained with the `Metric` class: 
 
 ```
-ece_metric, df = ECEMetric(n_bins=20, weighted=True, return_df=True)
+ece_metric, df = ECEMetric(n_bins=20, weighted=True, return_df=True)(accs, probs)
 ```
 
 This dataframe can be plotted using `plot_df()`: 
